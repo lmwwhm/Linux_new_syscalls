@@ -374,7 +374,7 @@ int do_execve2(unsigned long * eip,long tmp,char * filename,
 	unsigned long p=PAGE_SIZE*MAX_ARG_PAGES-4;
 
 	if ((0xffff & eip[1]) != 0x000f)
-		panic("execve2 called from supervisor mode");
+		panic("execve called from supervisor mode");
 	for (i=0 ; i<MAX_ARG_PAGES ; i++)	/* clear page-table */
 		page[i]=0;
 	if (!(inode=namei(filename)))		/* get executables inode */
@@ -524,6 +524,14 @@ restart_interp:
 		put_fs_byte(0,(char *) (i++));
 	eip[0] = ex.a_entry;		/* eip, magic happens :-) */
 	eip[3] = p;			/* stack pointer */
+
+	unsigned long offset0;
+	unsigned long end0;
+	end0 = (current->brk-1)&(0xfffff000);
+	for(offset0 = 0; offset0 <= end0; offset0 += 4096){
+		do_no_page2(current->start_code + offset0);
+	}
+
 	return 0;
 exec_error2:
 	iput(inode);
