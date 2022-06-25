@@ -291,10 +291,6 @@ int sys_umask(int mask)
 	return (old);
 }
 
-int sys_execve2(unsigned long * eip,long tmp,char * filename,char ** argv, char ** envp){
-    printk("Successfully run execve2");
-    return 1;
-}
 
 int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count){
 
@@ -302,11 +298,10 @@ int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 
 
 int sys_sleep(unsigned int seconds){
-	long i=0;
-	while(i<100000000)i++;
-	printk("Successfully run sleep");
+	sys_signal(14,1,0);
+	sys_alarm(seconds);
+	sys_pause();
 	return 0;
-
 }
 
 long sys_getcwd(char * buf, size_t size){

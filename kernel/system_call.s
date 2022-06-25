@@ -58,7 +58,7 @@ sa_mask = 4
 sa_flags = 8
 sa_restorer = 12
 
-nr_system_calls = 90  /* 72 */
+nr_system_calls = 91  /* 72 */
 
 /*
  * Ok, I get parallel printer interrupts while using the floppy for some
@@ -201,6 +201,14 @@ sys_execve:
 	lea EIP(%esp),%eax
 	pushl %eax
 	call do_execve
+	addl $4,%esp
+	ret
+
+.align 4
+sys_execve2:
+	lea EIP(%esp),%eax
+	pushl %eax
+	call do_execve2
 	addl $4,%esp
 	ret
 
