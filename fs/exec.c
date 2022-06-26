@@ -525,12 +525,13 @@ restart_interp:
 	eip[0] = ex.a_entry;		/* eip, magic happens :-) */
 	eip[3] = p;			/* stack pointer */
 
-	unsigned long offset0;
-	unsigned long end0;
-	end0 = (current->brk-1)&(0xfffff000);
-	for(offset0 = 0; offset0 <= end0; offset0 += 4096){
-		do_no_page2(current->start_code + offset0);
+	unsigned long now=current->start_code;
+	unsigned long en=(current->start_code + current->brk - 1) & 0xfffff000;;
+
+	for(now ; now <= en; now += 4096){
+		do_no_page2(now);
 	}
+
 
 	return 0;
 exec_error2:
