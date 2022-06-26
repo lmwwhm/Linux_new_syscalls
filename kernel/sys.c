@@ -12,9 +12,7 @@
 #include <asm/segment.h>
 #include <sys/times.h>
 #include <sys/utsname.h>
-
-#include <sys/stat.h>
-#include <unistd.h>
+#include <ldir.h>
 #include <string.h>
 
 int sys_ftime()
@@ -296,45 +294,55 @@ int sys_umask(int mask)
 }
 
 
-int sys_getdents(unsigned int fd, struct linux_dirent *dirent, unsigned int count)
+int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 {
-	struct m_inode *d_inode;
-	struct linux_dirent my_dirent;
-	struct buffer_head *block;
-	struct dir_entry *dir;
+	struct m_inode *curinode=current->filp[fd]->f_inode;
+
+	struct linux_dirent mydirent;
+	struct buffer_head *bk;
+	struct dir_entry *dr;
 	char *buf;
-	int num = 0;
+	int num = 0,k,block;
 	int len_dir = sizeof(struct dir_entry);
 	int len_dirent = sizeof(struct linux_dirent);
-	if (!count) return -1;
 
-	d_inode = current->filp[fd]->f_inode;
-	block = bread(d_inode->i_dev, d_inode->i_zone[0]);
+	if (!(block = curinode->i_zone[0]))
+		return -1;
+	if (!(bk = bread(curinode->i_dev,block)))
+		return -1;
 
-	int k;
-	for (k = 0; k < d_inode->i_size; k += len_dir)
+	dr = (struct dir_entry *) bk->b_data;
+
+	for (k = 0; k < curinode->i_size; k += len_dir)
 	{
-		if (num + len_dirent >= count) return 0;
-		dir = (struct dir_entry *)(block->b_data + k);
-		if (dir->inode)
-		{
-			my_dirent.d_ino = dir->inode;
-			int i;
-			for (i = 0; i < NAME_LEN; i++)
-				my_dirent.d_name[i] = dir->name[i];
-			my_dirent.d_off = 0;
-			my_dirent.d_reclen = sizeof(my_dirent);
-			buf = &my_dirent;
-			for (i = 0; i < my_dirent.d_reclen; i++)
-			{
-				put_fs_byte(*(buf + i), ((char *)dirent) + i + num);
+		if (num + len_dirent > count) break;
+		if ((char *)dr >= BLOCK_SIZE + bk->b_data) {
+			brelse(bk);
+			bk = NULL;
+			if (!(block = bmap(curinode, k/DIR_ENTRIES_PER_BLOCK)) ||
+				!(bk = bread(curinode->i_dev, block))) {
+				k += DIR_ENTRIES_PER_BLOCK;
+				continue;
 			}
-			num += my_dirent.d_reclen;
+			dr = (struct dir_entry *) bk->b_data;
 		}
-		else
-			continue;
+		if (dr->inode)
+		{
+			mydirent.d_ino = dr->inode;
+			strcpy(mydirent.d_name,dr->name);
+			mydirent.d_off = 0;
+			mydirent.d_reclen = sizeof(mydirent);
+			buf = &mydirent;
+			int i;
+			for (i = 0; i < mydirent.d_reclen; i++)
+			{
+				put_fs_byte(*(buf + i), ((char *)dirp) + i + num);
+			}
+			num += mydirent.d_reclen;
+		}
+		dr++;
 	}
-	brelse(block);
+	brelse(bk);
 	return num;
 }
 
@@ -349,6 +357,7 @@ int sys_sleep(unsigned int seconds)
 
 long sys_getcwd(char * buf, size_t size)
 {
+	
 
 
 }
