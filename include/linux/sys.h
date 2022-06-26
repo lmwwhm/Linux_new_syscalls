@@ -91,9 +91,9 @@ extern int sys_readlink();
 extern int sys_uselib();
 extern int sys_execve2();
 extern int sys_getdents();
-extern void sys_coushu();
+extern int sys_coushu();
 extern int sys_sleep();
-extern int sys_getcwd();
+extern long sys_getcwd();
 
 fn_ptr sys_call_table[] = { sys_setup, sys_exit, sys_fork, sys_read,
 sys_write, sys_open, sys_close, sys_waitpid, sys_creat, sys_link,
