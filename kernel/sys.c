@@ -297,7 +297,6 @@ int sys_umask(int mask)
 int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 {
 	struct m_inode *curinode=current->filp[fd]->f_inode;
-
 	struct linux_dirent mydirent;
 	struct buffer_head *bk;
 	struct dir_entry *dr;
@@ -312,7 +311,7 @@ int sys_getdents(unsigned int fd, struct linux_dirent *dirp, unsigned int count)
 		return -1;
 
 	dr = (struct dir_entry *) bk->b_data;
-
+	
 	for (k = 0; k < curinode->i_size; k += len_dir)
 	{
 		if (num + len_dirent > count) break;
@@ -357,9 +356,51 @@ int sys_sleep(unsigned int seconds)
 
 long sys_getcwd(char * buf, size_t size)
 {
-	
+	int cur_inode, fa_inode, ff_inode,k; 
+	struct m_inode *cur_dr=current->pwd,*root_dr=current->root;
+	struct buffer_head *bk;
+	struct dir_entry *dr;
+	char tmp[256]={0}, ans_buf[256]={0};
+	int len_dir = sizeof(struct dir_entry);
 
+	if(cur_dr!=root_dr){
+		bk = bread(current->pwd->i_dev,cur_dr->i_zone[0]);
+		dr = (struct dir_entry *) bk->b_data;
+		cur_inode = dr->inode;
+		dr++;
+		fa_inode = dr->inode; 	
+		while (cur_dr != root_dr) {
+			cur_dr = iget(current->pwd->i_dev, fa_inode);
+			bk = bread(current->pwd->i_dev,cur_dr->i_zone[0]);
+			dr = (struct dir_entry *) bk->b_data;
+			ff_inode = (dr+1)->inode;
+			k=0;
+			while (k < cur_dr->i_size) {
+				if(dr->inode == cur_inode) {
+					strcpy(tmp, dr->name);
+					strcat(tmp, "/");
+					strcat(tmp, ans_buf);
+					strcpy(ans_buf, tmp);
+					break;
+				}
+				dr++;
+				k+=len_dir;
+			}
+			cur_inode = fa_inode;
+			fa_inode = ff_inode;
+		}
+	brelse(bk);
+	}
+	strcpy(tmp, "/");
+	strcat(tmp, ans_buf);
+	strcpy(ans_buf, tmp);
 
+	if(strlen(ans_buf)>size) return NULL;
+	int i;
+	for(i = 0; i<ans_buf[i]; i++){
+		put_fs_byte(ans_buf[i], buf + i);
+	}
+	return (long)buf;
 }
 
 int sys_coushu(){
